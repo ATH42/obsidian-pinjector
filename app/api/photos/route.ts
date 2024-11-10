@@ -1,6 +1,10 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
+// Get bridge server URL from environment variable
+const BRIDGE_SERVER_URL =
+  process.env.BRIDGE_SERVER_URL || "http://localhost:3001";
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -27,24 +31,17 @@ export async function POST(request: Request) {
       }),
     );
 
-    // Try to update Obsidian if running locally
-    try {
-      const obsidianResponse = await fetch("http://localhost:27123/addImages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ photos: uploads }),
-        signal: AbortSignal.timeout(5000),
-      });
+    // Send URLs to bridge server
+    const bridgeResponse = await fetch(`${BRIDGE_SERVER_URL}/photos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ photos: uploads }),
+    });
 
-      if (!obsidianResponse.ok) {
-        console.warn(
-          "Failed to update Obsidian, but photos were uploaded successfully",
-        );
-      }
-    } catch (obsidianError) {
-      console.warn("Could not connect to Obsidian plugin:", obsidianError);
+    if (!bridgeResponse.ok) {
+      throw new Error("Failed to process photos in Obsidian");
     }
 
     return NextResponse.json({
