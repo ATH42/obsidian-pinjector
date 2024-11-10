@@ -27,17 +27,24 @@ export async function POST(request: Request) {
       }),
     );
 
-    // Forward URLs to Obsidian plugin
-    const obsidianResponse = await fetch("http://localhost:27123/addImages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ photos: uploads }),
-    });
+    // Try to update Obsidian if running locally
+    try {
+      const obsidianResponse = await fetch("http://localhost:27123/addImages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ photos: uploads }),
+        signal: AbortSignal.timeout(5000),
+      });
 
-    if (!obsidianResponse.ok) {
-      throw new Error("Failed to update Obsidian");
+      if (!obsidianResponse.ok) {
+        console.warn(
+          "Failed to update Obsidian, but photos were uploaded successfully",
+        );
+      }
+    } catch (obsidianError) {
+      console.warn("Could not connect to Obsidian plugin:", obsidianError);
     }
 
     return NextResponse.json({
